@@ -11,7 +11,7 @@ import { createStackNavigator } from '@react-navigation/stack';
 //allows to stack screens to navigate between
 const Stack = createStackNavigator();
 
-class HelloWorld extends Component {
+class App extends Component {
   constructor(props) {
     super(props);
     this.state = { name: '', }
@@ -45,4 +45,4 @@ class HelloWorld extends Component {
 
 
 
-export default HelloWorld
+export default App
