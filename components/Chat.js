@@ -1,6 +1,9 @@
+
 import React, { Component } from 'react';
 import { View, Platform, KeyboardAvoidingView, StyleSheet, Text } from 'react-native';
-import { Bubble, GiftedChat } from 'react-native-gifted-chat';
+import { Bubble, GiftedChat, InputToolbar } from 'react-native-gifted-chat';
+import NetInfo from '@react-native-community/netinfo';
+import AsyncStorage from '@react-native-community/async-storage';
 
 const firebase = require('firebase');
 require('firebase/firestore');
@@ -18,6 +21,7 @@ export default class Chat extends Component {
         avatar: '',
       },
       loggedInText: '',
+      isConnected: false,
     }
     if (!firebase.apps.length) {
       firebase.initializeApp({
@@ -36,30 +40,76 @@ export default class Chat extends Component {
 
   }
 
+  async getMessages() {
+    let messages = [];
+    try {
+      messages = (await AsyncStorage.getItem('messages')) || [];
+      this.setState({
+        messages: JSON.parse(messages)
+      });
+    } catch (error) {
+      console.log(error.message);
+    }
+  };
+
+  async saveMessages() {
+    try {
+      await AsyncStorage.setItem(
+        'messages',
+        JSON.stringify(this.state.messages));
+    } catch (error) {
+      console.log(error.message);
+    }
+  }
+
+  async deleteMessages() {
+    try {
+      await AsyncStorage.removeItem('messages');
+      this.setState({
+        messages: []
+      })
+    } catch (error) {
+      console.log(error.message);
+    }
+  }
+
   componentDidMount() {
 
-    this.authUnsubscribe = firebase.auth().onAuthStateChanged(async (user) => {
-      if (!user) {
-        try {
-          await firebase.auth().signInAnonymously();
-          console.log(user);
-        } catch (error) {
-          console.log(`Unable to sign in: ${error.message}`);
-        }
+    NetInfo.fetch().then((state) => {
+      if (state.isConnected) {
+        this.authUnsubscribe = firebase
+          .auth()
+          .onAuthStateChanged(async (user) => {
+            if (!user) {
+              try {
+                await firebase.auth().signInAnonymously();
+              } catch (error) {
+                console.log(`Unable to sign in: ${error.message}`);
+              }
+            }
+            this.setState({
+              isConnected: true,
+              user: {
+                _id: user.uid,
+                name: this.props.route.params.name,
+                avatar: 'https://placeimg.com/140/140/any',
+              },
+              loggedInText: `${this.props.route.params.name} has entered the chat`,
+              messages: [],
+            });
+            this.unsubscribe = this.referenceMessages
+              .orderBy('createdAt', 'desc')
+              .onSnapshot(this.onCollectionUpdate)
+          });
+        console.log('online');
+      } else {
+        this.setState({
+          isConnected: false,
+        });
+        this.getMessages();
       }
-      this.setState({
-        user: {
-          _id: user.uid,
-          name: this.props.route.params.name,
-          avatar: 'https://placeimg.com/140/140/any'
-        },
-        loggedInText: `${this.props.route.params.name} has entered the chat`,
-        messages: [],
-      });
-      this.unsubscribe = this.referenceMessages
-        .orderBy('createdAt', 'desc')
-        .onSnapshot(this.onCollectionUpdate)
-    });
+    })
+
   }
 
   componentWillUnmount() {
@@ -75,6 +125,7 @@ export default class Chat extends Component {
       }),
       () => {
         this.addMessages();
+        this.saveMessages();
       }
     );
   }
@@ -112,6 +163,17 @@ export default class Chat extends Component {
     });
   };
 
+  renderInputToolbar = (props) => {
+    if (this.state.isConnected == false) {
+    } else {
+      return (
+        <InputToolbar
+          {...props}
+        />
+      );
+    }
+  }
+
   renderBubble(props) {
     return (
       <Bubble
@@ -132,6 +194,7 @@ export default class Chat extends Component {
       <View style={[styles.chatBackground, { backgroundColor }]}>
         <Text>{this.state.loggedInText}</Text>
         <GiftedChat
+          renderInputToolbar={this.renderInputToolbar}
           renderBubble={this.renderBubble.bind(this)}
           messages={this.state.messages}
           onSend={(messages) => this.onSend(messages)}
