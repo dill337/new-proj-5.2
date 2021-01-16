@@ -1,9 +1,11 @@
 
 import React, { Component } from 'react';
-import { View, Platform, KeyboardAvoidingView, StyleSheet, Text } from 'react-native';
+import { View, Platform, KeyboardAvoidingView, StyleSheet, Text, Image } from 'react-native';
 import { Bubble, GiftedChat, InputToolbar } from 'react-native-gifted-chat';
+import MapView from 'react-native-maps';
 import NetInfo from '@react-native-community/netinfo';
 import AsyncStorage from '@react-native-community/async-storage';
+import CustomActions from './CustomActions'
 
 const firebase = require('firebase');
 require('firebase/firestore');
@@ -11,8 +13,6 @@ require('firebase/firestore');
 export default class Chat extends Component {
   constructor() {
     super();
-
-
     this.state = {
       messages: [],
       user: {
@@ -22,6 +22,8 @@ export default class Chat extends Component {
       },
       loggedInText: '',
       isConnected: false,
+      image: null,
+      location: null,
     }
     if (!firebase.apps.length) {
       firebase.initializeApp({
@@ -139,6 +141,8 @@ export default class Chat extends Component {
       messages.push({
         _id: data._id,
         text: data.text,
+        image: data.image || '',
+        location: data.location || '',
         createdAt: data.createdAt.toDate(),
         user: {
           _id: data.user._id,
@@ -160,6 +164,8 @@ export default class Chat extends Component {
       createdAt: message.createdAt,
       user: message.user,
       sent: true,
+      image: message.image || '',
+      location: message.location || '',
     });
   };
 
@@ -187,17 +193,49 @@ export default class Chat extends Component {
     )
   }
 
+  renderCustomView(props) {
+    const { currentMessage } = props;
+    if (currentMessage.location) {
+      return (
+        <View>
+          <MapView
+            style={{
+              width: 150,
+              height: 100,
+              borderRadius: 13,
+              margin: 3
+            }}
+            region={{
+              latitude: currentMessage.location.latitude,
+              longitude: currentMessage.location.longitude,
+              latitudeDelta: 0.0922,
+              longitudeDelta: 0.0421,
+            }}
+          />
+        </View>
+      );
+    }
+    return null;
+  }
+
+  renderCustomActions = (props) => <CustomActions {...props} />
+
   render() {
 
     let backgroundColor = this.props.route.params.backgroundColor
     return (
       <View style={[styles.chatBackground, { backgroundColor }]}>
         <Text>{this.state.loggedInText}</Text>
+        {this.state.image &&
+          <Image source={{ uri: this.state.image.uri }} style={{ width: 200, height: 200 }} />}
         <GiftedChat
+          renderCustomView={this.renderCustomView}
           renderInputToolbar={this.renderInputToolbar}
           renderBubble={this.renderBubble.bind(this)}
+          renderActions={this.renderCustomActions}
           messages={this.state.messages}
           onSend={(messages) => this.onSend(messages)}
+          image={this.state.image}
           user={this.state.user}
         />
         { Platform.OS === 'android' ? <KeyboardAvoidingView behavior="height" /> : null
@@ -212,3 +250,4 @@ const styles = StyleSheet.create({
     flex: 1
   },
 });
+

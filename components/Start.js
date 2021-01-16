@@ -30,7 +30,7 @@ class Start extends React.Component {
           />
           <View style={styles.chooseColorBox}>
             <Text style={styles.chooseColor}>
-              Pick Your Background Color
+              Pick Your Own Background Color
             </Text>
           </View>
 

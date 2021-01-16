@@ -7,6 +7,7 @@ import Start from './components/Start';
 import Chat from './components/Chat';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
+// import CustomActions from './CustomActions';
 
 //allows to stack screens to navigate between
 const Stack = createStackNavigator();
@@ -21,6 +22,11 @@ class App extends Component {
   alertMyText(input = []) {
     Alert.alert(input.text);
   }
+
+  // renderCustomActions = (props) => {
+  //   return <CustomActions {...props} />
+  // };
+
   render() {
 
     return (
